@@ -8,17 +8,13 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
-from isaaclab_tasks.utils import import_packages
 
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
-parser = argparse.ArgumentParser(description="Zero agent for Isaac Lab environments.")
-parser.add_argument(
-    "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
-)
-parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environments.")
+parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
+parser.add_argument("--task", type=str, default="Isaac-Pace-Anymal-D-v0", help="Name of the task.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -43,7 +39,7 @@ def main():
     """Zero actions agent with Isaac Lab environment."""
     # parse configuration
     env_cfg = parse_env_cfg(
-        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs, use_fabric=not args_cli.disable_fabric
+        args_cli.task, device=args_cli.device, num_envs=args_cli.num_envs
     )
     # create environment
     env = gym.make(args_cli.task, cfg=env_cfg)
@@ -51,14 +47,22 @@ def main():
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
     print(f"[INFO]: Gym action space: {env.action_space}")
+    # TODO: adjust parameters during runtime
+    # TODO: change default position and reset
     # reset environment
     env.reset()
+    time_frame = torch.linspace(0, 1000, steps=1000, device=env.unwrapped.device)
+    trajectory = torch.zeros((1000, 12), device=env.unwrapped.device)
+    trajectory[:, :] = 2 * torch.sin(0.2 * time_frame).unsqueeze(-1)
+    counter = 0
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
             # compute zero actions
-            actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+            # actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
+            actions = trajectory[counter % 1000, :].unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
+            counter += 1
             # apply actions
             env.step(actions)
 
