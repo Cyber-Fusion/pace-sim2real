@@ -36,21 +36,6 @@ from torch import pi
 import pace_sim2real.tasks  # noqa: F401
 from pace_sim2real.utils.paths import project_root
 
-IDENTIFIED_JOINTS = [
-    "LF_HAA",
-    "LF_HFE",
-    "LF_KFE",
-    "RF_HAA",
-    "RF_HFE",
-    "RF_KFE",
-    "LH_HAA",
-    "LH_HFE",
-    "LH_KFE",
-    "RH_HAA",
-    "RH_HFE",
-    "RH_KFE",
-]
-
 
 def main():
     """Zero actions agent with Isaac Lab environment."""
@@ -68,28 +53,35 @@ def main():
 
     articulation = env.unwrapped.scene["robot"]
 
-    joint_names = IDENTIFIED_JOINTS
-    joint_ids = [articulation.joint_names.index(name) for name in joint_names]
+    joint_order = env_cfg.sim2real.joint_order
+    joint_ids = torch.tensor([articulation.joint_names.index(name) for name in joint_order], device=env.unwrapped.device)
 
-    friction = torch.tensor([0.1] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)
     armature = torch.tensor([0.1] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)
     damping = torch.tensor([4.5] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)
-
+    friction = torch.tensor([0.05] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)
+    bias = torch.tensor([0.05] * 12, device=env.unwrapped.device).unsqueeze(0)
+    time_lag = torch.tensor([[5]], dtype=torch.int, device=env.unwrapped.device)
     env.reset()
 
-    articulation.write_joint_friction_coefficient_to_sim(friction, joint_ids, env_ids=torch.tensor([0]))
-    articulation.data.default_joint_friction[:, joint_ids] = friction
-    articulation.write_joint_armature_to_sim(armature, joint_ids, env_ids=torch.arange(len(armature)))
+    articulation.write_joint_armature_to_sim(armature, joint_ids=joint_ids, env_ids=torch.arange(len(armature)))
     articulation.data.default_joint_armature[:, joint_ids] = armature
-    articulation.write_joint_viscous_friction_coefficient_to_sim(damping, joint_ids, env_ids=torch.arange(len(damping)))
+    articulation.write_joint_viscous_friction_coefficient_to_sim(damping, joint_ids=joint_ids, env_ids=torch.arange(len(damping)))
     articulation.data.default_joint_viscous_friction_coeff[:, joint_ids] = damping
+    articulation.write_joint_friction_coefficient_to_sim(friction, joint_ids=joint_ids, env_ids=torch.tensor([0]))
+    articulation.data.default_joint_friction_coeff[:, joint_ids] = friction
+    drive_types = articulation.actuators.keys()
+    for drive_type in drive_types:
+        drive_indices = articulation.actuators[drive_type].joint_indices
+        if isinstance(drive_indices, slice):
+            all_idx = torch.arange(joint_ids.shape[0], device=joint_ids.device)
+            drive_indices = all_idx[drive_indices]
+        comparison_matrix = (joint_ids.unsqueeze(1) == drive_indices.unsqueeze(0))
+        drive_joint_idx = torch.argmax(comparison_matrix.int(), dim=0)
+        articulation.actuators[drive_type].update_time_lags(time_lag)
+        articulation.actuators[drive_type].update_encoder_bias(bias[:, drive_joint_idx])
 
-    project_data_dir = "anymal_sim"
-    data_dir = project_root() / "data" / project_data_dir
+    data_dir = project_root() / "data" / env_cfg.sim2real.robot_name
 
-    time_frame = torch.linspace(0, 1000, steps=1000, device=env.unwrapped.device)
-    trajectory = torch.zeros((1000, 12), device=env.unwrapped.device)
-    trajectory[:, :] = 2 * torch.sin(0.2 * time_frame).unsqueeze(-1)
     # Create a chirp signal for each action dimension
 
     duration = 20  # seconds
@@ -103,7 +95,7 @@ def main():
     phase = 2 * pi * (f0 * t + ((f1 - f0) / (2 * duration)) * t ** 2)
     chirp_signal = torch.sin(phase)
 
-    trajectory = torch.zeros((num_steps, 12), device=env.unwrapped.device)
+    trajectory = torch.zeros((num_steps, len(joint_ids)), device=env.unwrapped.device)
     trajectory[:, :] = chirp_signal.unsqueeze(-1)
     trajectory_directions = torch.tensor(
         [1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
@@ -127,16 +119,16 @@ def main():
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
-            # compute zero actions
+            # compute actions
+            dof_pos_buffer[counter, :] = env.unwrapped.scene.articulations["robot"].data.joint_pos[0, joint_ids] - bias[0]
             actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
             actions = trajectory[counter % num_steps, :].unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
-            if counter % 100 == 0:
-                print(f"[INFO]: Step {counter/sample_rate} seconds")
             # apply actions
             obs, _, _, _, _ = env.step(actions)
-            dof_pos_buffer[counter, :] = env.unwrapped.scene.articulations["robot"].data.joint_pos[0, joint_ids]
             dof_target_pos_buffer[counter, :] = env.unwrapped.scene.articulations["robot"]._data.joint_pos_target[0, joint_ids]
             counter += 1
+            if counter % 400 == 0:
+                print(f"[INFO]: Step {counter/sample_rate} seconds")
             if counter >= num_steps:
                 break
 
@@ -146,18 +138,19 @@ def main():
     from time import sleep
     sleep(1)  # wait a bit for everything to settle
 
+    (data_dir).mkdir(parents=True, exist_ok=True)
     torch.save({
         "time": time_data.cpu(),
         "dof_pos": dof_pos_buffer.cpu(),
-        "dof_target_pos": dof_target_pos_buffer.cpu(),
+        "des_dof_pos": dof_target_pos_buffer.cpu(),
     }, data_dir / "chirp_data.pt")
 
     import matplotlib.pyplot as plt
 
     for i in range(len(joint_ids)):
         plt.figure()
-        plt.plot(dof_pos_buffer[:, i].cpu().numpy(), label=f"{joint_names[i]} pos")
-        plt.plot(dof_target_pos_buffer[:, i].cpu().numpy(), label=f"{joint_names[i]} target", linestyle='dashed')
+        plt.plot(dof_pos_buffer[:, i].cpu().numpy(), label=f"{joint_order[i]} pos")
+        plt.plot(dof_target_pos_buffer[:, i].cpu().numpy(), label=f"{joint_order[i]} target", linestyle='dashed')
         plt.legend()
         plt.show()
 

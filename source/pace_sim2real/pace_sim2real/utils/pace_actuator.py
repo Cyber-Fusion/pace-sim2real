@@ -18,7 +18,7 @@ class PaceDCMotor(DCMotor):
     We model the joint position that the PD actuator gets by adding an encoder bias term to the true joint position.
     Essentially, the actuator commands in the encoder frame and not the true joint frame.
 
-    Unfortunately, delayed PD actuator is inheriting from IdealPDActuator and not DCMotor.
+    Unfortunately, the delayed PD actuator (DelayedPDActuator class) is inheriting from IdealPDActuator and not DCMotor.
     Thus, we need to re-implement the delay buffer logic here again. Sorry for the duplicate code.
     """
 
@@ -49,11 +49,12 @@ class PaceDCMotor(DCMotor):
         self.velocities_delay_buffer.reset(env_ids)
         self.efforts_delay_buffer.reset(env_ids)
 
-    def update_encoder_bias(self, encoder_bias: torch.Tensor, joint_ids: Sequence[int]):
-        self.encoder_bias[:, joint_ids] = encoder_bias
+    def update_encoder_bias(self, encoder_bias: torch.Tensor):
+        self.encoder_bias = encoder_bias
 
-    def update_time_lags(self, delay: int | torch.Tensor):
-        env_ids = torch.arange(self._num_envs, device=self._device)
+    def update_time_lags(self, delay: int | torch.Tensor, env_ids: Sequence[int] | None = None):
+        if env_ids is None:
+            env_ids = torch.arange(self._num_envs, device=self._device)
         self.positions_delay_buffer.set_time_lag(delay, env_ids)
         self.velocities_delay_buffer.set_time_lag(delay, env_ids)
         self.efforts_delay_buffer.set_time_lag(delay, env_ids)
@@ -64,5 +65,5 @@ class PaceDCMotor(DCMotor):
         control_action.joint_positions = self.positions_delay_buffer.compute(control_action.joint_positions)
         control_action.joint_velocities = self.velocities_delay_buffer.compute(control_action.joint_velocities)
         control_action.joint_efforts = self.efforts_delay_buffer.compute(control_action.joint_efforts)
-        # compute actuator model
+        # compute actuator model with encoder bias added to joint positions (joint position in encoder frame)
         return super().compute(control_action, joint_pos + self.encoder_bias, joint_vel)

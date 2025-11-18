@@ -5,6 +5,7 @@
 
 # import math
 from dataclasses import MISSING
+import torch
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, AssetBaseCfg
@@ -92,6 +93,27 @@ class TerminationsCfg:
     """Termination terms for the MDP."""
     time_out = DoneTerm(func=mdp.time_out, time_out=False)
 
+
+@configclass
+class CMAESOptimizerCfg:
+    """CMA-ES optimizer configuration."""
+    max_iteration: int = 300
+    epsilon: float = 1e-2
+    sigma: float = 0.5
+    save_interval: int = 10
+    save_optimization_process: bool = False  # consume more disk space if True, saves optimization process after finishing
+
+
+@configclass
+class PaceCfg:
+    """Overall configuration for Pace Sim2Real task."""
+    cmaes: CMAESOptimizerCfg = CMAESOptimizerCfg()
+
+    robot_name: str = MISSING
+    joint_order: list = MISSING
+    bounds_params: torch.Tensor = MISSING
+    data_dir: str = MISSING
+
 ##
 # Environment configuration
 ##
@@ -108,6 +130,8 @@ class PaceSim2realEnvCfg(ManagerBasedRLEnvCfg):
     rewards: RewardsCfg = RewardsCfg()
     terminations: TerminationsCfg = TerminationsCfg()
 
+    sim2real: PaceCfg = PaceCfg()
+
     # Post initialization
     def __post_init__(self) -> None:
         """Post initialization."""
@@ -115,8 +139,8 @@ class PaceSim2realEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 1
         self.episode_length_s = 99999.0  # long episodes
         # viewer settings
-        self.viewer.lookat = (0.0, 0.0, 2.0)
-        self.viewer.eye = (2.0, 2.0, 3.0)
+        self.viewer.lookat = (0.0, 0.0, 0.8)
+        self.viewer.eye = (2.0, 2.0, 1.5)
         # simulation settings
         self.sim.dt = 0.0025  # 400Hz simulation
         self.sim.render_interval = 4  # render at 100Hz
