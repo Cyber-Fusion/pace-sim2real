@@ -5,7 +5,8 @@
 
 # PACE Documentation
 
-Welcome to the documentation for **PACE**, a systematic sim-to-real pipeline for diverse legged robots.  
+Welcome to the documentation for **PACE (Precise Adaptation through Continuous Evolution)**, a systematic sim-to-real pipeline for diverse legged robots.
+
 PACE provides unified tools for accurate actuator modeling, automatic system identification for seamless deployment of RL controllers to real hardware.
 
 <div class="video-wrapper">

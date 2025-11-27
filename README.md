@@ -1,13 +1,16 @@
-# ⚙️ PACE — Precise Adaptation through Continuous Evolution
+# ⚙️ PACE — Sim-to-Real Transfer for Legged Robots
+![License](https://img.shields.io/badge/license-Apache%202.0-blue)
+![Python](https://img.shields.io/badge/python-3.10+-green)
+![Status](https://img.shields.io/badge/status-active_development-orange)
 
 PACE is a framework for **sim-to-real transfer of diverse robotic systems**, combining data-driven system identification with evolutionary optimization.
-It enables accurate actuator modeling and robust adaptation from simulation to reality by explicitly learning physically meaningful dynamics parameters.
+It enables accurate actuator modeling and robust adaptation between simulation to reality by explicitly learning physically meaningful dynamics parameters.
 
 ---
 
-## What is PACE?
+## 🤖🐾 What is PACE?
 
-PACE bridges the gap between simulation and real hardware by:
+PACE (Precise Adaptation through Continuous Evolution) bridges the gap between simulation and real hardware by:
 
 * Estimating actuator and joint dynamics directly from measured data
 * Using CMA-ES for parameter optimization
@@ -18,7 +21,7 @@ It is designed to integrate seamlessly with **NVIDIA Isaac Lab** and follows its
 
 ---
 
-## Installation
+## 📦 Installation
 
 ### 1. Install Isaac Lab
 
@@ -48,22 +51,13 @@ python -m pip install -e source/pace_sim2real
 
 ---
 
-## 📚 Local Documentation Preview (TODO adjust once open sourcing)
+## 📚 Documentation
 
-Even if the website is not yet public, you can view the documentation locally.
+The full PACE documentation is available online:
 
-### Quick preview
+👉 https://pace.filipbjelonic.com
 
-```bash
-pip install mkdocs mkdocs-material
-mkdocs serve
-```
-
-Then open in your browser:
-
-```
-http://127.0.0.1:8000
-```
+This documentation site is built using **MkDocs** with the **Material for MkDocs** theme.
 
 ---
 
@@ -84,6 +78,12 @@ cd path/to/pace-sim2real
 python scripts/pace/data_collection.py
 ```
 
+This will collect simulation data and store results in:
+
+```
+data/anymal_d_sim/chirp_data.pt
+```
+
 ### 3. Run PACE parameter fitting
 
 ```bash
@@ -93,12 +93,12 @@ python scripts/pace/fit.py
 This will estimate the actuator and joint parameters using CMA-ES and store results in:
 
 ```
-logs/pace/<robot_name>/
+logs/pace/anymal_d_sim/
 ```
 
 ---
 
-## Usage
+## 🧭 Usage
 
 Recommended imports for custom projects:
 
@@ -110,9 +110,11 @@ import pace_sim2real.tasks  # registers environments
 
 Please refer to the official documentation for further information.
 
+⚠️ PACE is under active development. APIs may evolve as the framework matures.
+
 ---
 
-## License
+## 📜 License
 
 © 2025 ETH Zurich, Robotic Systems Lab, Filip Bjelonic
 
@@ -121,7 +123,7 @@ See the LICENSE file for details.
 
 ---
 
-## Maintainers
+## 👥 Maintainers
 
 The PACE project is actively maintained by:
 
@@ -133,7 +135,7 @@ The maintainers are responsible for reviewing contributions, managing issues, an
 
 ---
 
-## Acknowledgements
+## 🙏 Acknowledgements
 
 We would like to thank the RSL Learning Group for many insightful discussions that influenced the development of PACE. We are especially grateful to Konrad and Matthias for valuable technical input related to electronics and system integration.
 
@@ -202,14 +204,14 @@ Examples of packages that can often be safely excluded:
 
 ---
 
-## Contributing & Feedback
+## 🤝 Contributing & Feedback
 
 Internal feedback is highly welcome during this phase.
 Please report issues, unclear steps, or suggestions directly via GitHub issues or internal channels.
 
 ---
 
-## How to cite
+## 📖 How to cite
 
 If you use **PACE Sim2Real** in your research, please cite our [paper](https://arxiv.org/pdf/2509.06342):
 
