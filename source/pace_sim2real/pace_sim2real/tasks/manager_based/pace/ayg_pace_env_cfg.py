@@ -1,6 +1,6 @@
 from isaaclab.utils import configclass
 
-from isaaclab_assets.robots.anymal import AYG_CFG
+from isaaclab_assets.robots.ayg import AYG_CFG
 from isaaclab.assets import ArticulationCfg
 from pace_sim2real.utils import PaceDCMotorCfg
 from pace_sim2real import PaceSim2realEnvCfg, PaceSim2realSceneCfg, PaceCfg
