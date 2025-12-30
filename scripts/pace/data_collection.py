@@ -39,6 +39,64 @@ import pace_sim2real.tasks  # noqa: F401
 from pace_sim2real.utils import project_root
 
 
+def plot_data(joint_ids, joint_order, data_dir, data):
+    import matplotlib.pyplot as plt
+    
+    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
+
+    for i in range(len(joint_ids)):
+        ax = axs[i // 3, i % 3]
+        ax.plot(data['time'].numpy(), data['dof_pos'][:, i].numpy(), label="Measured")
+        ax.plot(data['time'].numpy(), data['des_dof_pos'][:, i].numpy(), label="Target", linestyle='dashed')
+        ax.set_title(f"Joint {joint_order[i]} Trajectory")
+        ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Joint position [rad]")
+        ax.grid()
+        ax.legend()
+
+    plt.savefig(
+        data_dir / "joint_trajectory.pdf", 
+        bbox_inches='tight',
+        format='pdf',
+    )
+    plt.close(fig)
+    
+    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
+    
+    for i in range(len(joint_ids)):
+        ax = axs[i // 3, i % 3]
+        ax.plot(data['time'].numpy(), data['dof_vel'][:, i].numpy())
+        ax.set_title(f"Joint {joint_order[i]} Velocity")
+        ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Joint velocity [rad/s]")
+        ax.grid()
+    plt.savefig(
+        data_dir / "joint_velocity.pdf", 
+        bbox_inches='tight',
+        format='pdf',
+    )
+    plt.close(fig)
+    
+    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
+    
+    for i in range(len(joint_ids)):
+        ax = axs[i // 3, i % 3]
+        ax.plot(data['time'].numpy(), data['dof_torque'][:, i].numpy())
+        ax.set_title(f"Joint {joint_order[i]} Torque")
+        ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Joint torque [Nm]")
+        ax.grid()
+    plt.savefig(
+        data_dir / "joint_torque.pdf", 
+        bbox_inches='tight',
+        format='pdf',
+    )
+    plt.close(fig)
+
+
 def main():
     # parse configuration
     env_cfg = parse_env_cfg(
@@ -120,17 +178,24 @@ def main():
     # simulate environment
     dof_pos_buffer = torch.zeros(num_steps, len(joint_ids), device=env.unwrapped.device)
     dof_target_pos_buffer = torch.zeros(num_steps, len(joint_ids), device=env.unwrapped.device)
+    dof_vel_buffer = torch.zeros(num_steps, len(joint_ids), device=env.unwrapped.device)
+    dof_torque_buffer = torch.zeros(num_steps, len(joint_ids), device=env.unwrapped.device)
     time_data = t
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
+            robot = env.unwrapped.scene.articulations["robot"]
+            robot_data = robot.data
+            
             # compute actions
-            dof_pos_buffer[counter, :] = env.unwrapped.scene.articulations["robot"].data.joint_pos[0, joint_ids] - bias[0]
+            dof_pos_buffer[counter, :] = robot_data.joint_pos[0, joint_ids] - bias[0]
             actions = torch.zeros(env.action_space.shape, device=env.unwrapped.device)
             actions = trajectory[counter % num_steps, :].unsqueeze(0).repeat(env.unwrapped.num_envs, 1)
             # apply actions
             obs, _, _, _, _ = env.step(actions)
-            dof_target_pos_buffer[counter, :] = env.unwrapped.scene.articulations["robot"]._data.joint_pos_target[0, joint_ids]
+            dof_target_pos_buffer[counter, :] = robot_data.joint_pos_target[0, joint_ids]
+            dof_vel_buffer[counter, :] = robot_data.joint_vel[0, joint_ids]
+            dof_torque_buffer[counter, :] = robot.root_physx_view.get_dof_actuation_forces()[0, joint_ids]
             counter += 1
             if counter % 400 == 0:
                 print(f"[INFO]: Step {counter/sample_rate} seconds")
@@ -144,26 +209,16 @@ def main():
     sleep(1)  # wait a bit for everything to settle
 
     (data_dir).mkdir(parents=True, exist_ok=True)
-    torch.save({
+    chirp_data = {
         "time": time_data.cpu(),
         "dof_pos": dof_pos_buffer.cpu(),
         "des_dof_pos": dof_target_pos_buffer.cpu(),
-    }, data_dir / "chirp_data.pt")
+        "dof_vel": dof_vel_buffer.cpu(),
+        "dof_torque": dof_torque_buffer.cpu(),
+    }
+    torch.save(chirp_data, data_dir / "chirp_data.pt")
 
-    import matplotlib.pyplot as plt
-
-    for i in range(len(joint_ids)):
-        plt.figure()
-        plt.plot(t.cpu().numpy(), dof_pos_buffer[:, i].cpu().numpy(), label=f"{joint_order[i]} pos")
-        plt.plot(t.cpu().numpy(), dof_target_pos_buffer[:, i].cpu().numpy(), label=f"{joint_order[i]} target", linestyle='dashed')
-        plt.title(f"Joint {joint_order[i]} Trajectory")
-        plt.xlabel("Time [s]")
-        plt.ylabel("Joint position [rad]")
-        plt.grid()
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
-
+    plot_data(joint_ids.cpu().numpy(), joint_order, data_dir, chirp_data)
 
 if __name__ == "__main__":
     # run the main function
