@@ -62,6 +62,9 @@ class AygPaceSceneCfg(PaceSim2realSceneCfg):
     # ground penetration or unwanted contacts. Actuator naming is flexible and
     # purely user-defined.
     robot: ArticulationCfg = AYG_CFG.replace(
+        spawn=AYG_CFG.spawn.replace(
+            usd_path="./ayg_isaac_lab/source/isaaclab_assets/data/Robots/ayg/ayg.usd",
+        ),
         prim_path="{ENV_REGEX_NS}/Robot",
         init_state=ArticulationCfg.InitialStateCfg(pos=(0.0, 0.0, 1.0)),
         actuators={"legs": AYGDRIVE_PACE_ACTUATOR_CFG},
