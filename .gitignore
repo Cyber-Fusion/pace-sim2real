@@ -72,3 +72,5 @@ tests/
 
 # PACE specific
 **/data/*
+
+*.mp4
