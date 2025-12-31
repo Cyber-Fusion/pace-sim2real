@@ -29,6 +29,8 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
+from datetime import datetime
+
 import gymnasium as gym
 import torch
 
@@ -38,6 +40,29 @@ from torch import pi
 
 import pace_sim2real.tasks  # noqa: F401
 from pace_sim2real.utils import project_root
+
+
+def save_config(env_cfg: "PaceSim2realEnvCfg", data_dir: str):
+    act_cfg = env_cfg.scene.robot.actuators['legs']
+    robot_cfg = env_cfg.sim2real
+    
+    with open(data_dir / "env_config.md", "w") as f:
+        print(f'# Actuator Configuration\n', file=f)
+        print(f'joint_names_expr: {act_cfg.joint_names_expr}', file=f)
+        print(f'saturation_effort: {act_cfg.saturation_effort}', file=f)
+        print(f'effort_limit: {act_cfg.effort_limit}', file=f)
+        print(f'velocity_limit: {act_cfg.velocity_limit}', file=f)
+        print(f'stiffness: {act_cfg.stiffness}', file=f)
+        print(f'damping: {act_cfg.damping}', file=f)
+        print(f'encoder_bias: {act_cfg.encoder_bias}', file=f)
+        print(f'max_delay: {act_cfg.max_delay}', file=f)
+        
+        print('\n', file=f)
+    
+        print(f'# Sim2Real Configuration\n', file=f)
+        print(f'joint_order: {robot_cfg.joint_order}', file=f)
+        print(f'joint_limits: {robot_cfg.joint_limits}', file=f)
+        print(f'bounds_params: {robot_cfg.bounds_params}', file=f)
 
 
 def plot_data(joint_ids, joint_order, data_dir, data):
@@ -131,7 +156,7 @@ def main():
         articulation.actuators[drive_type].update_encoder_bias(bias[:, drive_joint_idx])
         articulation.actuators[drive_type].reset(torch.arange(env.unwrapped.num_envs))
 
-    data_dir = project_root() / "data" / env_cfg.sim2real.robot_name
+    data_dir = project_root() / "data" / env_cfg.sim2real.robot_name / datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Create a chirp signal for each action dimension
 
@@ -207,6 +232,8 @@ def main():
         "dof_torque": dof_torque_buffer.cpu(),
     }
     torch.save(chirp_data, data_dir / "chirp_data.pt")
+    
+    save_config(env_cfg, data_dir)
 
     plot_data(joint_ids.cpu().numpy(), joint_order, data_dir, chirp_data)
 
