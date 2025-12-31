@@ -1,5 +1,6 @@
 # © 2025 ETH Zurich, Robotic Systems Lab
 # Author: Filip Bjelonic
+# Modifications © 2025 CyberFusion - Davide De Benedittis
 # Licensed under the Apache License 2.0
 
 """Script to run an environment with zero action agent."""
@@ -42,6 +43,7 @@ from pace_sim2real.utils import project_root
 def plot_data(joint_ids, joint_order, data_dir, data):
     import matplotlib.pyplot as plt
     
+    # Save joint position and target position plots
     fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
 
     for i in range(len(joint_ids)):
@@ -62,39 +64,28 @@ def plot_data(joint_ids, joint_order, data_dir, data):
     )
     plt.close(fig)
     
-    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
-    
-    for i in range(len(joint_ids)):
-        ax = axs[i // 3, i % 3]
-        ax.plot(data['time'].numpy(), data['dof_vel'][:, i].numpy())
-        ax.set_title(f"Joint {joint_order[i]} Velocity")
-        ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
-        ax.set_xlabel("Time [s]")
-        ax.set_ylabel("Joint velocity [rad/s]")
-        ax.grid()
-    plt.savefig(
-        data_dir / "joint_velocity.pdf", 
-        bbox_inches='tight',
-        format='pdf',
-    )
-    plt.close(fig)
-    
-    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
-    
-    for i in range(len(joint_ids)):
-        ax = axs[i // 3, i % 3]
-        ax.plot(data['time'].numpy(), data['dof_torque'][:, i].numpy())
-        ax.set_title(f"Joint {joint_order[i]} Torque")
-        ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
-        ax.set_xlabel("Time [s]")
-        ax.set_ylabel("Joint torque [Nm]")
-        ax.grid()
-    plt.savefig(
-        data_dir / "joint_torque.pdf", 
-        bbox_inches='tight',
-        format='pdf',
-    )
-    plt.close(fig)
+    # Save velocity and torque plots
+    values = [
+        {'value': data['dof_vel'][:, i].numpy(), 'label': 'Velocity'},
+        {'value': data['dof_torque'][:, i].numpy(), 'label': 'Torque'},
+    ]
+    for v in values:
+        fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
+        
+        for i in range(len(joint_ids)):
+            ax = axs[i // 3, i % 3]
+            ax.plot(data['time'].numpy(), v['value'])
+            ax.set_title(f"Joint {joint_order[i]} {v['label']}")
+            ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
+            ax.set_xlabel("Time [s]")
+            ax.set_ylabel(f"Joint {v['label']}")
+            ax.grid()
+        plt.savefig(
+            data_dir / f"joint_{v['label'].lower()}.pdf", 
+            bbox_inches='tight',
+            format='pdf',
+        )
+        plt.close(fig)
 
 
 def main():
@@ -161,14 +152,13 @@ def main():
         [1.0, 1.0, 1.0, -1.0, 1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0],
         device=env.unwrapped.device
     )
-    trajectory_bias = torch.tensor(
-        [0.0, 0.4, 0.8] * 4,
-        device=env.unwrapped.device
-    )
-    trajectory_scale = torch.tensor(
-        [0.25, 0.5, -2.0] * 4,
-        device=env.unwrapped.device
-    )
+    
+    joint_lower_limit = env_cfg.sim2real.joint_limits['lower'].to(env.unwrapped.device)
+    joint_upper_limit = env_cfg.sim2real.joint_limits['upper'].to(env.unwrapped.device)
+    
+    trajectory_scale = (joint_upper_limit - joint_lower_limit) / (2.0 * trajectory_directions)
+    trajectory_bias = (joint_upper_limit + joint_lower_limit) / (2.0 * trajectory_directions * trajectory_scale)
+    
     trajectory[:, joint_ids] = (trajectory[:, joint_ids] + trajectory_bias.unsqueeze(0)) * trajectory_directions.unsqueeze(0) * trajectory_scale.unsqueeze(0)
 
     articulation.write_joint_position_to_sim(trajectory[0, :].unsqueeze(0) + bias[0, joint_ids])

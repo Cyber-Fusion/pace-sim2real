@@ -6,11 +6,12 @@ from pace_sim2real.utils import PaceDCMotorCfg
 from pace_sim2real import PaceSim2realEnvCfg, PaceSim2realSceneCfg, PaceCfg
 import torch
 
+
 AYGDRIVE_PACE_ACTUATOR_CFG = PaceDCMotorCfg(
     joint_names_expr=[".*HAA", ".*HFE", ".*KFE"],
     saturation_effort=60.0,
-    effort_limit=40.0,
-    velocity_limit=20.0,
+    effort_limit=20.0,
+    velocity_limit=10.0,
     stiffness={".*": 40.0},  # P gain in Nm/rad
     damping={".*": 1.0},  # D gain in Nm s/rad
     encoder_bias=[0.0] * 12,  # encoder bias in radians
@@ -42,6 +43,21 @@ class AygPaceCfg(PaceCfg):
         "RH_HFE",
         "RH_KFE",
     ]
+    
+    joint_limits = {
+        'lower': torch.tensor([
+            -0.50, -0.60, -0.70,
+            -0.50, -0.60, -0.70,
+            -0.50, -0.90, -1.10,
+            -0.50, -0.90, -1.10,
+        ]),
+        'upper': torch.tensor([
+            0.40, 1.20, 1.10,
+            0.40, 1.20, 1.10,
+            0.80, 0.90, 0.70,
+            0.80, 0.90, 0.70,
+        ]),
+    }
 
     def __post_init__(self):
         # set bounds for parameters
@@ -82,5 +98,5 @@ class AygPaceEnvCfg(PaceSim2realEnvCfg):
         super().__post_init__()
 
         # robot sim and control settings
-        self.sim.dt = 0.0025  # 400Hz simulation
+        self.sim.dt = 1.0/400  # 400Hz simulation
         self.decimation = 1  # 400Hz control

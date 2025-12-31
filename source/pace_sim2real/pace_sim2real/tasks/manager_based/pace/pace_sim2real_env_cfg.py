@@ -1,5 +1,6 @@
 # © 2025 ETH Zurich, Robotic Systems Lab
 # Author: Filip Bjelonic
+# Modifications © 2025 CyberFusion - Davide De Benedittis
 # Licensed under the Apache License 2.0
 
 # import math
@@ -111,6 +112,7 @@ class PaceCfg:
     robot_name: str = MISSING
     data_dir: str = MISSING
     joint_order: list = MISSING
+    joint_limits: dict[list] = MISSING
     bounds_params: torch.Tensor = MISSING
 
 ##
