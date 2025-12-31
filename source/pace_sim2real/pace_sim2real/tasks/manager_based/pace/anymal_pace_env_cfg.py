@@ -1,5 +1,6 @@
 # © 2025 ETH Zurich, Robotic Systems Lab
 # Author: Filip Bjelonic
+# Modifications © 2025 CyberFusion - Davide De Benedittis
 # Licensed under the Apache License 2.0
 
 from isaaclab.utils import configclass
@@ -42,6 +43,21 @@ class AnymalDPaceCfg(PaceCfg):
         "RH_HFE",
         "RH_KFE",
     ]
+    
+    joint_limits: dict = {
+        'lower': torch.tensor([
+            -0.25, -0.30, -3.60,
+            -0.25, -0.30, -3.60,
+            -0.25, -0.70, -0.40,
+            -0.25, -0.70, -0.40,
+        ]),
+        'upper': torch.tensor([
+            0.25, 0.70, 0.40,
+            0.25, 0.70, 0.40,
+            0.25, 0.30, 3.60,
+            0.25, 0.30, 3.60,
+        ]),
+    }
 
     def __post_init__(self):
         # set bounds for parameters
