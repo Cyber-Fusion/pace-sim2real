@@ -30,6 +30,8 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 from datetime import datetime
+import shutil
+from pathlib import Path
 
 import gymnasium as gym
 import torch
@@ -236,6 +238,10 @@ def main():
     save_config(env_cfg, data_dir)
 
     plot_data(joint_ids.cpu().numpy(), joint_order, data_dir, chirp_data)
+    
+    for f in Path(data_dir).iterdir():
+        if f.is_file():
+            shutil.copy(f, data_dir.parent / f.name)
 
 if __name__ == "__main__":
     # run the main function
