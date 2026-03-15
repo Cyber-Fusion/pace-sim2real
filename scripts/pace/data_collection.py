@@ -14,7 +14,7 @@ from isaaclab.app import AppLauncher
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environments.")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
-parser.add_argument("--task", type=str, default="Isaac-Pace-Anymal-D-v0", help="Name of the task.")
+parser.add_argument("--task", type=str, default="Isaac-Pace-Ayg-v0", help="Name of the task.")
 parser.add_argument("--min_frequency", type=float, default=0.1, help="Minimum frequency for the chirp signal in Hz.")
 parser.add_argument("--max_frequency", type=float, default=10.0, help="Maximum frequency for the chirp signal in Hz.")
 parser.add_argument("--duration", type=float, default=20.0, help="Duration of the chirp signal in seconds.")
@@ -44,7 +44,7 @@ import pace_sim2real.tasks  # noqa: F401
 from pace_sim2real.utils import project_root
 
 
-def save_config(env_cfg: "PaceSim2realEnvCfg", data_dir: str):
+def save_config(env_cfg: "PaceSim2realEnvCfg", data_dir: Path):
     act_cfg = env_cfg.scene.robot.actuators['legs']
     robot_cfg = env_cfg.sim2real
     
@@ -92,23 +92,19 @@ def plot_data(joint_ids, joint_order, data_dir, data):
     plt.close(fig)
     
     # Save velocity and torque plots
-    values = [
-        {'value': data['dof_vel'][:, i].numpy(), 'label': 'Velocity'},
-        {'value': data['dof_torque'][:, i].numpy(), 'label': 'Torque'},
-    ]
-    for v in values:
+    for v_key, v_label in [('dof_vel', 'Velocity'), ('dof_torque', 'Torque')]:
         fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(15, 10), constrained_layout=True)
-        
+
         for i in range(len(joint_ids)):
             ax = axs[i // 3, i % 3]
-            ax.plot(data['time'].numpy(), v['value'])
-            ax.set_title(f"Joint {joint_order[i]} {v['label']}")
+            ax.plot(data['time'].numpy(), data[v_key][:, i].numpy())
+            ax.set_title(f"Joint {joint_order[i]} {v_label}")
             ax.set_xlim([data['time'].numpy()[0], data['time'].numpy()[-1]])
             ax.set_xlabel("Time [s]")
-            ax.set_ylabel(f"Joint {v['label']}")
+            ax.set_ylabel(f"Joint {v_label}")
             ax.grid()
         plt.savefig(
-            data_dir / f"joint_{v['label'].lower()}.pdf", 
+            data_dir / f"joint_{v_label.lower()}.pdf",
             bbox_inches='tight',
             format='pdf',
         )
