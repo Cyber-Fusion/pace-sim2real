@@ -1,6 +1,7 @@
 from isaaclab.utils import configclass
 
-from isaaclab_assets.robots.ayg import AYG_CFG
+# from cf_lab import CF_LAB_DATA_DIR
+from cf_lab.assets.ayg import AYG_CFG
 from isaaclab.assets import ArticulationCfg
 from pace_sim2real.utils import PaceDCMotorCfg
 from pace_sim2real import PaceSim2realEnvCfg, PaceSim2realSceneCfg, PaceCfg
@@ -14,7 +15,12 @@ AYGDRIVE_PACE_ACTUATOR_CFG = PaceDCMotorCfg(
     velocity_limit=10.0,
     stiffness={".*": 40.0},  # P gain in Nm/rad
     damping={".*": 1.0},  # D gain in Nm s/rad
-    encoder_bias=[0.0] * 12,  # encoder bias in radians
+    encoder_bias={".*": 0.0},  # encoder bias in radians
+    # note: modeling coulomb friction if friction = dynamic_friction
+    # > in newer Isaac Sim versions, friction is renamed to static_friction
+    friction={".*": 0.0},  # static friction coefficient (Nm)
+    dynamic_friction={".*": 0.0},  # dynamic friction coefficient (Nm)
+    viscous_friction={".*": 0.0},  # viscous friction coefficient (Nm s/rad)
     max_delay=10,  # max delay in simulation steps
 )
 
@@ -46,16 +52,16 @@ class AygPaceCfg(PaceCfg):
     
     joint_limits = {
         'lower': torch.tensor([
-            -0.50, -0.60, -0.70,
-            -0.50, -0.60, -0.70,
-            -0.50, -0.90, -1.10,
-            -0.50, -0.90, -1.10,
+            -0.50, -1.60, -0.7,
+            -0.40, -1.60, -0.7,
+            -0.50, -2.40, -0.7,
+            -0.80, -2.40, -0.7,
         ]),
         'upper': torch.tensor([
-            0.40, 1.20, 1.10,
-            0.40, 1.20, 1.10,
-            0.80, 0.90, 0.70,
-            0.80, 0.90, 0.70,
+            0.40, 3.20, 1.1,
+            0.50, 3.20, 1.1,
+            0.80, 2.40, 1.1,
+            0.50, 2.40, 1.1,
         ]),
     }
 
@@ -78,9 +84,9 @@ class AygPaceSceneCfg(PaceSim2realSceneCfg):
     # ground penetration or unwanted contacts. Actuator naming is flexible and
     # purely user-defined.
     robot: ArticulationCfg = AYG_CFG.replace(
-        spawn=AYG_CFG.spawn.replace(
-            usd_path="./ayg_isaac_lab/source/isaaclab_assets/data/Robots/ayg/ayg.usd",
-        ),
+        # spawn=AYG_CFG.spawn.replace(
+        #     asset_path=f"{CF_LAB_DATA_DIR}/Robots/ayg_description/urdf/ayg.urdf",
+        # ),
         prim_path="{ENV_REGEX_NS}/Robot",
         init_state=ArticulationCfg.InitialStateCfg(pos=(0.0, 0.0, 1.0)),
         actuators={"legs": AYGDRIVE_PACE_ACTUATOR_CFG},

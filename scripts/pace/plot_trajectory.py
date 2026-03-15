@@ -3,6 +3,8 @@
 # Licensed under the Apache License 2.0
 
 import torch
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import re
 from pathlib import Path
@@ -13,7 +15,7 @@ import argparse
 parser = argparse.ArgumentParser(description="Pace agent for Isaac Lab environments.")
 parser.add_argument("--folder_name", type=str, default=None, help="Name of the folder to use.")
 parser.add_argument("--mean_name", type=str, default=None, help="Name of the parameters file to use.")
-parser.add_argument("--robot_name", type=str, default="anymal_d_sim", help="Name of the robot.")
+parser.add_argument("--robot_name", type=str, default="ayg_sim", help="Name of the robot.")
 parser.add_argument("--plot_trajectory", action="store_true", help="Whether to plot the trajectory.")
 parser.add_argument("--plot_score", action="store_true", help="Whether to plot the score over iterations.")
 
@@ -107,7 +109,10 @@ if plot_score:
     plt.xlim(0, params_num)
     # plt.ylim(0, None)
     plt.grid()
-    plt.show()
+    score_path = log_dir / "score_plot.png"
+    plt.savefig(score_path, dpi=150)
+    print(f"Saved score plot to {score_path}")
+    plt.close()
 
 if plot_trajectory:
     for i in range(len(joint_order)):
@@ -121,6 +126,9 @@ if plot_trajectory:
         plt.legend()
         plt.grid()
         plt.tight_layout()
-        plt.show()
+        traj_path = log_dir / f"trajectory_{joint_order[i]}.png"
+        plt.savefig(traj_path, dpi=150)
+        print(f"Saved trajectory plot to {traj_path}")
+        plt.close()
 
 print("Plotting complete.")
