@@ -18,6 +18,7 @@ parser.add_argument("--task", type=str, default="Isaac-Pace-Ayg-v0", help="Name 
 parser.add_argument("--min_frequency", type=float, default=0.1, help="Minimum frequency for the chirp signal in Hz.")
 parser.add_argument("--max_frequency", type=float, default=10.0, help="Maximum frequency for the chirp signal in Hz.")
 parser.add_argument("--duration", type=float, default=20.0, help="Duration of the chirp signal in seconds.")
+parser.add_argument("--amplitude_scale", type=float, default=1.0, help="Scale factor for chirp amplitude (e.g. 0.5 = half range).")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
@@ -182,7 +183,7 @@ def main():
     joint_lower_limit = env_cfg.sim2real.joint_limits['lower'].to(env.unwrapped.device)
     joint_upper_limit = env_cfg.sim2real.joint_limits['upper'].to(env.unwrapped.device)
     
-    trajectory_scale = (joint_upper_limit - joint_lower_limit) / (2.0 * trajectory_directions)
+    trajectory_scale = args_cli.amplitude_scale * (joint_upper_limit - joint_lower_limit) / (2.0 * trajectory_directions)
     trajectory_bias = (joint_upper_limit + joint_lower_limit) / (2.0 * trajectory_directions * trajectory_scale)
     
     trajectory[:, joint_ids] = (trajectory[:, joint_ids] + trajectory_bias.unsqueeze(0)) * trajectory_directions.unsqueeze(0) * trajectory_scale.unsqueeze(0)

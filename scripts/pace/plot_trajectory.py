@@ -115,8 +115,26 @@ if plot_score:
     plt.close()
 
 if plot_trajectory:
+    # Combined 4x3 grid plot (all joints)
+    fig, axs = plt.subplots(nrows=4, ncols=3, figsize=(36, 16), constrained_layout=True)
     for i in range(len(joint_order)):
-        plt.figure(figsize=(8, 4.5))
+        ax = axs[i // 3, i % 3]
+        ax.plot(time, trajectories[:, i].cpu().numpy() - encoder_bias[i].item(), c="tab:orange", label="Sim", linewidth=1.5)
+        ax.plot(time, real_trajectories[:, i].cpu().numpy(), label="Real", c="tab:green", linestyle="--", linewidth=1.5)
+        ax.plot(time, target_trajectories[:, i].cpu().numpy(), c="grey", label="Target", linestyle="--", alpha=0.5)
+        ax.set_title(f"Joint {joint_order[i]}")
+        ax.set_xlabel("Time [s]")
+        ax.set_ylabel("Joint position [rad]")
+        ax.legend(fontsize=7)
+        ax.grid()
+    combined_path = log_dir / "trajectory_all_joints.png"
+    fig.savefig(combined_path, dpi=150)
+    print(f"Saved combined trajectory plot to {combined_path}")
+    plt.close(fig)
+
+    # Individual per-joint plots
+    for i in range(len(joint_order)):
+        plt.figure(figsize=(12, 4.5))
         plt.plot(time, trajectories[:, i].cpu().numpy() - encoder_bias[i].item(), c="tab:orange", label="Sim", linewidth=2)  # in encoder frame
         plt.plot(time, real_trajectories[:, i].cpu().numpy(), label="Real", c="tab:green", linestyle="--", linewidth=2)
         plt.plot(time, target_trajectories[:, i].cpu().numpy(), c="grey", label="Target", linestyle="--", alpha=0.5)
