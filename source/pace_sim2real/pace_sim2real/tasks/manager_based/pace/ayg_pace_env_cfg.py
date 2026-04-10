@@ -88,7 +88,7 @@ class AygPaceSceneCfg(PaceSim2realSceneCfg):
         #     asset_path=f"{CF_LAB_DATA_DIR}/Robots/ayg_description/urdf/ayg.urdf",
         # ),
         prim_path="{ENV_REGEX_NS}/Robot",
-        init_state=ArticulationCfg.InitialStateCfg(pos=(0.0, 0.0, 1.0), rot=(0.0, 1.0, 0.0, 0.0)),  # belly up
+        init_state=ArticulationCfg.InitialStateCfg(pos=(0.0, 0.0, 1.0)),
         actuators={"legs": AYGDRIVE_PACE_ACTUATOR_CFG},
     )
 
