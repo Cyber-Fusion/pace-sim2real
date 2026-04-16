@@ -80,6 +80,7 @@ def main():
         sigma=env_cfg.sim2real.cmaes.sigma,
         save_interval=env_cfg.sim2real.cmaes.save_interval,
         save_optimization_process=env_cfg.sim2real.cmaes.save_optimization_process,
+        freeze_bias=env_cfg.sim2real.freeze_bias,
     )
 
     env.reset()

@@ -12,7 +12,7 @@ import os
 
 
 class CMAESOptimizer:
-    def __init__(self, bounds, population_size, log_dir, joint_order, max_iteration, data, device, epsilon=None, sigma=0.5, save_interval=10, save_optimization_process=False):
+    def __init__(self, bounds, population_size, log_dir, joint_order, max_iteration, data, device, epsilon=None, sigma=0.5, save_interval=10, save_optimization_process=False, freeze_bias=False):
 
         self.joint_order = joint_order
         self.max_iteration = max_iteration
@@ -32,7 +32,8 @@ class CMAESOptimizer:
                     "joint_order": joint_order,
                     "dof_pos": data["dof_pos"],
                     "des_dof_pos": data["des_dof_pos"],
-                    "time": data["time"]
+                    "time": data["time"],
+                    "freeze_bias": freeze_bias,
                     }, log_dir + "/config.pt")
 
         self.bounds = bounds
@@ -56,11 +57,17 @@ class CMAESOptimizer:
             self.sim_params_buffer = torch.zeros((max_iteration, population_size, bounds.shape[0]), device=device)
 
         num_joints = len(joint_order)
+        self.num_joints = num_joints
+        self.freeze_bias = freeze_bias
         self.armature_idx = slice(0, num_joints)
         self.damping_idx = slice(num_joints, 2 * num_joints)
         self.friction_idx = slice(2 * num_joints, 3 * num_joints)
-        self.bias_idx = slice(3 * num_joints, 4 * num_joints)
-        self.delay_idx = 4 * num_joints
+        if freeze_bias:
+            self.bias_idx = None
+            self.delay_idx = 3 * num_joints
+        else:
+            self.bias_idx = slice(3 * num_joints, 4 * num_joints)
+            self.delay_idx = 4 * num_joints
 
         self._reset_population()
         print("CMA-ES optimizer initialized.")
@@ -70,7 +77,10 @@ class CMAESOptimizer:
         return self.optimizer.ask()
 
     def tell(self, sim_dof_pos, real_dof_pos):
-        self.scores += torch.sum(torch.square(sim_dof_pos - real_dof_pos - self.sim_params[:, self.bias_idx]), dim=1)
+        if self.freeze_bias:
+            self.scores += torch.sum(torch.square(sim_dof_pos - real_dof_pos), dim=1)
+        else:
+            self.scores += torch.sum(torch.square(sim_dof_pos - real_dof_pos - self.sim_params[:, self.bias_idx]), dim=1)
         self.sim_dof_pos_buffer[:, self.scores_counter, :] = sim_dof_pos
         self.scores_counter += 1
 
@@ -120,7 +130,11 @@ class CMAESOptimizer:
         articulation.data.default_joint_friction_coeff[:, joint_ids] = self.sim_params[:, self.friction_idx]
         articulation.write_joint_dynamic_friction_coefficient_to_sim(self.sim_params[:, self.friction_idx], joint_ids=joint_ids, env_ids=env_ids)
         articulation.data.default_joint_dynamic_friction_coeff[:, joint_ids] = self.sim_params[:, self.friction_idx]
-        articulation.write_joint_position_to_sim(initial_position + self.sim_params[:, self.bias_idx], joint_ids=joint_ids)
+        if self.freeze_bias:
+            bias = torch.zeros(len(env_ids), len(joint_ids), device=self.device)
+        else:
+            bias = self.sim_params[:, self.bias_idx]
+        articulation.write_joint_position_to_sim(initial_position + bias, joint_ids=joint_ids)
         articulation.write_joint_velocity_to_sim(torch.zeros_like(initial_position), joint_ids=joint_ids)
         for drive_type in articulation.actuators.keys():
             drive_indices = articulation.actuators[drive_type].joint_indices
@@ -129,7 +143,7 @@ class CMAESOptimizer:
                 drive_indices = all_idx[drive_indices]
             comparison_matrix = (joint_ids.unsqueeze(1) == drive_indices.unsqueeze(0))
             drive_joint_idx = torch.argmax(comparison_matrix.int(), dim=0)
-            articulation.actuators[drive_type].update_encoder_bias(self.sim_params[:, self.bias_idx][:, drive_joint_idx])
+            articulation.actuators[drive_type].update_encoder_bias(bias[:, drive_joint_idx])
             articulation.actuators[drive_type].update_time_lags(self.sim_params[:, self.delay_idx].to(torch.int))
             articulation.actuators[drive_type].reset(env_ids)
 
@@ -142,7 +156,8 @@ class CMAESOptimizer:
         print("Armature: ", self.sim_params[min_index, self.armature_idx].tolist())
         print("Viscous Friction: ", self.sim_params[min_index, self.damping_idx].tolist())
         print("Static/Dynamic Friction: ", self.sim_params[min_index, self.friction_idx].tolist())
-        print("Bias: ", self.sim_params[min_index, self.bias_idx].tolist())
+        if not self.freeze_bias:
+            print("Bias: ", self.sim_params[min_index, self.bias_idx].tolist())
         print("Delay: ", self.sim_params[min_index, self.delay_idx].tolist())
         print(f"Elapsed time: {(datetime.now() - self._timer_start).total_seconds():.1f} seconds")
         self._timer_start = datetime.now()
@@ -161,12 +176,14 @@ class CMAESOptimizer:
         min_score, min_score_index = torch.min(self.scores, dim=0)
         max_score, _ = torch.max(self.scores, dim=0)
         for i in range(len(self.joint_order)):
-            self.writer.add_histogram("4_Bias/distribution_" + self.joint_order[i], self.sim_params[:, self.bias_idx][:, i], self.iteration_counter)
+            if not self.freeze_bias:
+                self.writer.add_histogram("4_Bias/distribution_" + self.joint_order[i], self.sim_params[:, self.bias_idx][:, i], self.iteration_counter)
             self.writer.add_histogram("3_Static_Dynamic_Friction/distribution_" + self.joint_order[i], self.sim_params[:, self.friction_idx][:, i], self.iteration_counter)
             self.writer.add_histogram("2_Viscous_Friction/distribution_" + self.joint_order[i], self.sim_params[:, self.damping_idx][:, i], self.iteration_counter)
             self.writer.add_histogram("1_Armature/distribution_" + self.joint_order[i], self.sim_params[:, self.armature_idx][:, i], self.iteration_counter)
 
-            self.writer.add_scalar("4_Bias/best_" + self.joint_order[i], self.sim_params[min_score_index, self.bias_idx][i].item(), self.iteration_counter)
+            if not self.freeze_bias:
+                self.writer.add_scalar("4_Bias/best_" + self.joint_order[i], self.sim_params[min_score_index, self.bias_idx][i].item(), self.iteration_counter)
             self.writer.add_scalar("3_Static_Dynamic_Friction/best_" + self.joint_order[i], self.sim_params[min_score_index, self.friction_idx][i].item(), self.iteration_counter)
             self.writer.add_scalar("2_Viscous_Friction/best_" + self.joint_order[i], self.sim_params[min_score_index, self.damping_idx][i].item(), self.iteration_counter)
             self.writer.add_scalar("1_Armature/best_" + self.joint_order[i], self.sim_params[min_score_index, self.armature_idx][i].item(), self.iteration_counter)

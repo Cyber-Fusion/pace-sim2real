@@ -21,7 +21,7 @@ AYGDRIVE_PACE_ACTUATOR_CFG = PaceDCMotorCfg(
     friction={".*": 0.0},  # static friction coefficient (Nm)
     dynamic_friction={".*": 0.0},  # dynamic friction coefficient (Nm)
     viscous_friction={".*": 0.0},  # viscous friction coefficient (Nm s/rad)
-    max_delay=10,  # max delay in simulation steps
+    max_delay=20,  # max delay in simulation steps
 )
 
 
@@ -30,7 +30,8 @@ class AygPaceCfg(PaceCfg):
     """Pace configuration for Ayg robot."""
     robot_name: str = "ayg"
     data_dir: str = "ayg/chirp_data.pt"  # located in pace_sim2real/data/ayg/chirp_data.pt
-    bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
+    freeze_bias: bool = True  # bias is 0 — real robot has on-time calibration
+    bounds_params: torch.Tensor = torch.zeros((37, 2))  # 12 armature + 12 damping + 12 friction + 1 delay = 37
     # IsaacLab determines joint ordering via breadth-first traversal, which may
     # differ from the ordering used in your real robot’s control stack or logged
     # data. To ensure correct alignment between simulated and real trajectories,
@@ -66,14 +67,12 @@ class AygPaceCfg(PaceCfg):
     }
 
     def __post_init__(self):
-        # set bounds for parameters
+        # set bounds for parameters (bias frozen to 0 — not optimized)
         self.bounds_params[:12, 0] = 1e-5
         self.bounds_params[:12, 1] = 1.0  # armature between 1e-5 - 1.0 [kgm2]
         self.bounds_params[12:24, 1] = 7.0  # dof_damping between 0.0 - 7.0 [Nm s/rad]
         self.bounds_params[24:36, 1] = 0.5  # friction between 0.0 - 0.5
-        self.bounds_params[36:48, 0] = -0.1
-        self.bounds_params[36:48, 1] = 0.1  # bias between -0.1 - 0.1 [rad]
-        self.bounds_params[48, 1] = 10.0  # delay between 0.0 - 10.0 [sim steps]
+        self.bounds_params[36, 1] = 20.0  # delay between 0.0 - 20.0 [sim steps]
 
 
 @configclass

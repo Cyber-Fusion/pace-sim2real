@@ -114,6 +114,7 @@ class PaceCfg:
     joint_order: list = MISSING
     joint_limits: dict[list] = MISSING
     bounds_params: torch.Tensor = MISSING
+    freeze_bias: bool = False
 
 ##
 # Environment configuration

@@ -86,9 +86,14 @@ print(f"Best parameter set: {mean}")
 print(f"Armature params: {mean[:len(joint_order)]}")
 print(f"Viscous friction params: {mean[len(joint_order):2 * len(joint_order)]}")
 print(f"Static/dynamic friction params: {mean[2 * len(joint_order):3 * len(joint_order)]}")
-print(f"Encoder bias params: {mean[3 * len(joint_order):4 * len(joint_order)]}")
+freeze_bias = config.get("freeze_bias", False)
+if freeze_bias:
+    print("Encoder bias: frozen to 0")
+    encoder_bias = torch.zeros(len(joint_order))
+else:
+    print(f"Encoder bias params: {mean[3 * len(joint_order):4 * len(joint_order)]}")
+    encoder_bias = mean[3 * len(joint_order):4 * len(joint_order)]
 print(f"Delay param: {mean[-1].item()}")
-encoder_bias = mean[3 * len(joint_order):4 * len(joint_order)]  # extract encoder bias
 
 if plot_score:
     try:
