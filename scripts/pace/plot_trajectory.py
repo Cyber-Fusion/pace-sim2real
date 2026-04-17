@@ -93,7 +93,11 @@ if freeze_bias:
 else:
     print(f"Encoder bias params: {mean[3 * len(joint_order):4 * len(joint_order)]}")
     encoder_bias = mean[3 * len(joint_order):4 * len(joint_order)]
-print(f"Delay param: {mean[-1].item()}")
+num_delay_params = len(mean) - (3 * len(joint_order) if freeze_bias else 4 * len(joint_order))
+if num_delay_params == 1:
+    print(f"Delay param (scalar): {mean[-1].item()}")
+else:
+    print(f"Delay params (per-joint): {mean[-num_delay_params:].tolist()}")
 
 if plot_score:
     try:

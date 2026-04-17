@@ -33,7 +33,7 @@ class AnymalDPaceCfg(PaceCfg):
     """Pace configuration for Anymal-D robot."""
     robot_name: str = "anymal_d_sim"
     data_dir: str = "anymal_d_sim/chirp_data.pt"  # located in pace_sim2real/data/anymal_d_sim/chirp_data.pt
-    bounds_params: torch.Tensor = torch.zeros((49, 2))  # 12 + 12 + 12 + 12 + 1 = 49 parameters to optimize
+    bounds_params: torch.Tensor = torch.zeros((60, 2))  # 12 armature + 12 damping + 12 friction + 12 bias + 12 delay = 60
     joint_order: list[str] = [
         "LF_HAA",
         "LF_HFE",
@@ -72,7 +72,7 @@ class AnymalDPaceCfg(PaceCfg):
         self.bounds_params[24:36, 1] = 0.5  # friction between 0.0 - 0.5
         self.bounds_params[36:48, 0] = -0.1
         self.bounds_params[36:48, 1] = 0.1  # bias between -0.1 - 0.1 [rad]
-        self.bounds_params[48, 1] = 10.0  # delay between 0.0 - 10.0 [sim steps]
+        self.bounds_params[48:60, 1] = 10.0  # per-joint delay between 0.0 - 10.0 [sim steps]
 
 
 @configclass

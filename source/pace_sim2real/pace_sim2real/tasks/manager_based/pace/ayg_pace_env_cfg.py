@@ -31,7 +31,7 @@ class AygPaceCfg(PaceCfg):
     robot_name: str = "ayg"
     data_dir: str = "ayg/chirp_data.pt"  # located in pace_sim2real/data/ayg/chirp_data.pt
     freeze_bias: bool = True  # bias is 0 — real robot has on-time calibration
-    bounds_params: torch.Tensor = torch.zeros((37, 2))  # 12 armature + 12 damping + 12 friction + 1 delay = 37
+    bounds_params: torch.Tensor = torch.zeros((48, 2))  # 12 armature + 12 damping + 12 friction + 12 delay = 48
     # IsaacLab determines joint ordering via breadth-first traversal, which may
     # differ from the ordering used in your real robot’s control stack or logged
     # data. To ensure correct alignment between simulated and real trajectories,
@@ -72,7 +72,7 @@ class AygPaceCfg(PaceCfg):
         self.bounds_params[:12, 1] = 1.0  # armature between 1e-5 - 1.0 [kgm2]
         self.bounds_params[12:24, 1] = 7.0  # dof_damping between 0.0 - 7.0 [Nm s/rad]
         self.bounds_params[24:36, 1] = 0.5  # friction between 0.0 - 0.5
-        self.bounds_params[36, 1] = 20.0  # delay between 0.0 - 20.0 [sim steps]
+        self.bounds_params[36:48, 1] = 20.0  # per-joint delay between 0.0 - 20.0 [sim steps]
 
 
 @configclass

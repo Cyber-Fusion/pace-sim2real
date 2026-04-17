@@ -134,7 +134,7 @@ def main():
     damping = torch.tensor([4.5] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)
     friction = torch.tensor([0.05] * len(joint_ids), device=env.unwrapped.device).unsqueeze(0)  # coulomb friction
     bias = torch.tensor([0.05] * 12, device=env.unwrapped.device).unsqueeze(0)
-    time_lag = torch.tensor([[5]], dtype=torch.int, device=env.unwrapped.device)
+    time_lag = torch.tensor([[5] * len(joint_ids)], dtype=torch.int, device=env.unwrapped.device)
     env.reset()
 
     articulation.write_joint_armature_to_sim(armature, joint_ids=joint_ids, env_ids=torch.arange(len(armature)))
