@@ -154,7 +154,7 @@ def main():
             drive_indices = all_idx[drive_indices]
         comparison_matrix = (joint_ids.unsqueeze(1) == drive_indices.unsqueeze(0))
         drive_joint_idx = torch.argmax(comparison_matrix.int(), dim=0)
-        articulation.actuators[drive_type].update_time_lags(time_lag)
+        articulation.actuators[drive_type].update_time_lags(time_lag[:, drive_joint_idx])
         articulation.actuators[drive_type].update_encoder_bias(bias[:, drive_joint_idx])
         articulation.actuators[drive_type].reset(torch.arange(env.unwrapped.num_envs))
 

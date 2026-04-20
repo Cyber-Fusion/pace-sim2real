@@ -83,8 +83,9 @@ class PaceDCMotor(DCMotor):
         # compute actuator model with encoder bias added to joint positions (joint position in encoder frame, not simulation frame)
         control_action_sim = super().compute(control_action, joint_pos - self.encoder_bias, joint_vel)
         efforts = control_action_sim.joint_efforts  # [num_envs, num_joints]
-        delayed = torch.stack(
-            [self.torques_delay_buffers[j].compute(efforts[:, j]) for j in range(self.num_joints)],
+        # CircularBuffer requires 3D storage [history, batch, feature]; keep a trailing dim of 1 per joint
+        delayed = torch.cat(
+            [self.torques_delay_buffers[j].compute(efforts[:, j:j+1]) for j in range(self.num_joints)],
             dim=1,
         )
         control_action_sim.joint_efforts = delayed
