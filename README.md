@@ -229,7 +229,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute.
 
 ## 📖 How to cite
 
-If you use **PACE Sim2Real** in your research, please cite our [paper](https://arxiv.org/pdf/2509.06342):
+If you use **PACE Sim2Real** in your research, please cite our [paper](https://arxiv.org/pdf/2509.06342).
+
+The paper has been accepted for publication in **The International Journal of Robotics Research (IJRR)**. The official IJRR citation will be added here once the article is published online.
 
 > F. Bjelonic, F. Tischhauser, and M. Hutter,  
 > _Towards Bridging the Gap: Systematic Sim-to-Real Transfer for Diverse Legged Robots_, arXiv:2509.06342, 2025.
@@ -245,6 +247,27 @@ If you use **PACE Sim2Real** in your research, please cite our [paper](https://a
   primaryClass  = {cs.RO},
 }
 ```
+
+---
+
+## ⭐ Star History
+
+<a href="https://www.star-history.com/#leggedrobotics/pace-sim2real&Date">
+  <picture>
+    <source
+      media="(prefers-color-scheme: dark)"
+      srcset="https://api.star-history.com/svg?repos=leggedrobotics/pace-sim2real&type=Date&theme=dark"
+    />
+    <source
+      media="(prefers-color-scheme: light)"
+      srcset="https://api.star-history.com/svg?repos=leggedrobotics/pace-sim2real&type=Date"
+    />
+    <img
+      alt="Star History Chart"
+      src="https://api.star-history.com/svg?repos=leggedrobotics/pace-sim2real&type=Date"
+    />
+  </picture>
+</a>
 
 ---
 
